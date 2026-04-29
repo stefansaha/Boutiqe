@@ -40,12 +40,6 @@ export function HeroSection() {
     video.setAttribute("webkit-playsinline", "")
     video.setAttribute("muted", "")
 
-    // Event-basiertes Abspielen für iOS
-    const handleCanPlay = () => attemptPlay()
-    const handleLoadedData = () => attemptPlay()
-
-    video.addEventListener("canplaythrough", handleCanPlay, { once: true })
-    video.addEventListener("loadeddata", handleLoadedData, { once: true })
 
     // Sofort versuchen falls bereits geladen
     if (video.readyState >= 3) {
@@ -60,8 +54,6 @@ export function HeroSection() {
 
     return () => {
       clearTimeout(fallbackTimer)
-      video.removeEventListener("canplaythrough", handleCanPlay)
-      video.removeEventListener("loadeddata", handleLoadedData)
     }
   }, [attemptPlay])
 
@@ -69,7 +61,7 @@ export function HeroSection() {
     <>
       <LoadingScreen isLoading={isLoading} />
 
-      <section className="relative h-dvh min-h-[500px] sm:min-h-[600px] max-h-[900px]">
+      <section className="relative h-svh min-h-[500px] sm:min-h-[600px] max-h-[900px]">
         <div style={{
           height: "100dvh",
           overflow: "hidden"
@@ -85,10 +77,6 @@ export function HeroSection() {
             loop
             playsInline
             preload="auto"
-            style={{
-              opacity: isVideoReady ? 1 : 0,
-              transition: "opacity 0.5s ease",
-            }}
             src={VIDEO_URL}
           />
 
