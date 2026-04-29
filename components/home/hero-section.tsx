@@ -22,7 +22,7 @@ export function HeroSection() {
     // Diese Attribute müssen SOWOHL als DOM-Attribute als auch als Properties gesetzt werden
     video.muted = true
     video.playsInline = true
-    
+
     // Wichtig: volume = 0 zusätzlich zu muted für iOS
     video.volume = 0
 
@@ -30,7 +30,7 @@ export function HeroSection() {
       try {
         // iOS benötigt manchmal einen kurzen Delay
         await new Promise(resolve => setTimeout(resolve, 100))
-        
+
         const playPromise = video.play()
         if (playPromise !== undefined) {
           await playPromise
@@ -80,7 +80,8 @@ export function HeroSection() {
             // iOS Safari: preload="metadata" ist besser als "auto" - spart Bandbreite
             preload="metadata"
             // x-webkit-airplay="deny" verhindert AirPlay-Probleme
-            // @ts-expect-error - webkit-specific attribute
+
+
             webkit-playsinline="true"
             x-webkit-airplay="deny"
             disablePictureInPicture

@@ -43,11 +43,11 @@ export function CTASection() {
 
     const attemptPlay = async () => {
       if (hasAttemptedPlay.current && !isVisible) return
-      
+
       try {
         // iOS benötigt manchmal einen kurzen Delay
         await new Promise(resolve => setTimeout(resolve, 100))
-        
+
         const playPromise = video.play()
         if (playPromise !== undefined) {
           await playPromise
@@ -96,7 +96,7 @@ export function CTASection() {
           // iOS Safari: preload="metadata" ist besser für Performance
           preload="metadata"
           controls={false}
-          // @ts-expect-error - webkit-specific attributes
+
           webkit-playsinline="true"
           x-webkit-airplay="deny"
           disablePictureInPicture
