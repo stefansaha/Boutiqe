@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 
-// Vercel Blob URL - besser für iOS Autoplay
+// Vercel Blob URL - H.264 encoded MP4 für beste iOS Kompatibilität
 const VIDEO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/5704899-uhd_4096_2160_24fps%20%281%29-4x9TYP7x6hUlQyIHdXXUnGOqdeGJUX.mp4"
 
 export function CTASection() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const [isVisible, setIsVisible] = useState(false)
+  const hasAttemptedPlay = useRef(false)
 
-  // Use Intersection Observer to play video when section is visible
+  // iOS Safari: Videos müssen sichtbar sein um abzuspielen
+  // Intersection Observer zum Starten wenn sichtbar
   useEffect(() => {
     const section = sectionRef.current
     if (!section) return
@@ -19,12 +21,10 @@ export function CTASection() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true)
-          }
+          setIsVisible(entry.isIntersecting)
         })
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: "50px" }
     )
 
     observer.observe(section)
@@ -34,54 +34,52 @@ export function CTASection() {
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !isVisible) return
+    if (!video) return
 
-    // Critical iOS settings
-    video.defaultMuted = true
+    // iOS Safari: Muted + playsInline sind PFLICHT für Autoplay
     video.muted = true
     video.playsInline = true
-    video.autoplay = true
-    video.loop = true
-    video.preload = "auto"
-
-    video.setAttribute("muted", "")
-    video.setAttribute("playsinline", "")
-    video.setAttribute("webkit-playsinline", "")
-    video.setAttribute("autoplay", "")
-
-    video.playbackRate = 0.8
-
-    let playAttempts = 0
-    const maxAttempts = 10
+    video.volume = 0
 
     const attemptPlay = async () => {
-      if (playAttempts >= maxAttempts) return
-
-      playAttempts++
-      video.muted = true
-      video.volume = 0
-
+      if (hasAttemptedPlay.current && !isVisible) return
+      
       try {
-        if (video.readyState < 2) {
-          video.load()
+        // iOS benötigt manchmal einen kurzen Delay
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        const playPromise = video.play()
+        if (playPromise !== undefined) {
+          await playPromise
+          hasAttemptedPlay.current = true
+          // Nur playbackRate setzen NACHDEM Video läuft
+          video.playbackRate = 0.8
         }
-        await video.play()
       } catch {
-        setTimeout(attemptPlay, 200)
+        // iOS Low Power Mode oder andere Blockierung - Video bleibt pausiert
       }
     }
 
-    attemptPlay()
+    const pauseVideo = () => {
+      if (video && !video.paused) {
+        video.pause()
+      }
+    }
 
-    const onReady = () => attemptPlay()
-    video.addEventListener("loadedmetadata", onReady)
-    video.addEventListener("loadeddata", onReady)
-    video.addEventListener("canplay", onReady)
+    if (isVisible) {
+      // Video starten wenn sichtbar
+      if (video.readyState >= 2) {
+        attemptPlay()
+      } else {
+        video.addEventListener("loadeddata", attemptPlay, { once: true })
+      }
+    } else {
+      // iOS: Video pausieren wenn nicht sichtbar (spart Batterie)
+      pauseVideo()
+    }
 
     return () => {
-      video.removeEventListener("loadedmetadata", onReady)
-      video.removeEventListener("loadeddata", onReady)
-      video.removeEventListener("canplay", onReady)
+      video.removeEventListener("loadeddata", attemptPlay)
     }
   }, [isVisible])
 
@@ -95,10 +93,18 @@ export function CTASection() {
           muted
           loop
           playsInline
-          preload="auto"
+          // iOS Safari: preload="metadata" ist besser für Performance
+          preload="metadata"
           controls={false}
+          // @ts-expect-error - webkit-specific attributes
+          webkit-playsinline="true"
+          x-webkit-airplay="deny"
+          disablePictureInPicture
+          disableRemotePlayback
           className="w-full h-full object-cover"
         >
+          {/* Codec-Hint hilft iOS bei der Erkennung */}
+          <source src={VIDEO_URL} type="video/mp4; codecs=avc1.42E01E, mp4a.40.2" />
           <source src={VIDEO_URL} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-[#1a1a1a]/75" />
