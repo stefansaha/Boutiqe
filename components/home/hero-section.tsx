@@ -69,7 +69,7 @@ export function HeroSection() {
     <>
       <LoadingScreen isLoading={isLoading} />
 
-      <section className="relative h-[100svh] min-h-[500px] sm:min-h-[600px] max-h-[900px]">
+      <section className="relative h-dvh min-h-[500px] sm:min-h-[600px] max-h-[900px]">
         <div style={{
           height: "100dvh",
           overflow: "hidden"
