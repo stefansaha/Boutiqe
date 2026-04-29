@@ -1,56 +1,66 @@
 "use client"
 
-
-// 12
-
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { LoadingScreen } from "@/components/loading-screen"
 
-// Vercel Blob URLs - besser für iOS Autoplay
+// Vercel Blob URL - H.264 encoded MP4 für beste iOS Kompatibilität
 const VIDEO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/8386975-uhd_4096_2160_25fps%20%281%29%20%281%29-w0ze6gWvgrrNeCaWGXH3aWF9gfqVHc.mp4"
 
 export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const hasAttemptedPlay = useRef(false)
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || hasAttemptedPlay.current) return
+    hasAttemptedPlay.current = true
 
-    // ✅ iOS Autoplay Anforderungen
+    // iOS Safari Autoplay: Video MUSS muted sein und playsinline haben
+    // Diese Attribute müssen SOWOHL als DOM-Attribute als auch als Properties gesetzt werden
     video.muted = true
-    video.defaultMuted = true
     video.playsInline = true
+    
+    // Wichtig: volume = 0 zusätzlich zu muted für iOS
+    video.volume = 0
 
-    video.setAttribute("muted", "")
-    video.setAttribute("playsinline", "")
-    video.setAttribute("webkit-playsinline", "")
-
-    const tryPlay = async () => {
+    const attemptPlay = async () => {
       try {
-        await video.play()
+        // iOS benötigt manchmal einen kurzen Delay
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        const playPromise = video.play()
+        if (playPromise !== undefined) {
+          await playPromise
+        }
         setIsVideoReady(true)
         setTimeout(() => setIsLoading(false), 200)
       } catch {
-        // Falls iOS blockiert → UI trotzdem anzeigen
+        // iOS Low Power Mode oder andere Blockierung
+        // Video-Poster wird als Fallback angezeigt
         setIsVideoReady(true)
         setIsLoading(false)
       }
     }
 
-    video.addEventListener("canplay", tryPlay, { once: true })
-    tryPlay()
+    // Warte auf genügend Daten vor dem Abspielen
+    if (video.readyState >= 2) {
+      attemptPlay()
+    } else {
+      video.addEventListener("loadeddata", attemptPlay, { once: true })
+    }
 
-    const fallback = setTimeout(() => {
+    // Fallback-Timer falls Video nicht lädt
+    const fallbackTimer = setTimeout(() => {
       setIsLoading(false)
       setIsVideoReady(true)
-    }, 2500)
+    }, 3000)
 
     return () => {
-      clearTimeout(fallback)
-      video.removeEventListener("canplay", tryPlay)
+      clearTimeout(fallbackTimer)
+      video.removeEventListener("loadeddata", attemptPlay)
     }
   }, [])
 
@@ -67,8 +77,14 @@ export function HeroSection() {
             muted
             loop
             playsInline
+            // iOS Safari: preload="metadata" ist besser als "auto" - spart Bandbreite
             preload="metadata"
-            poster="/hero-poster.jpg" // ✅ wichtig für iOS
+            // x-webkit-airplay="deny" verhindert AirPlay-Probleme
+            // @ts-expect-error - webkit-specific attribute
+            webkit-playsinline="true"
+            x-webkit-airplay="deny"
+            disablePictureInPicture
+            disableRemotePlayback
             style={{
               width: "100%",
               height: "100%",
@@ -77,6 +93,8 @@ export function HeroSection() {
               transition: "opacity 0.5s ease",
             }}
           >
+            {/* type="video/mp4; codecs=avc1.42E01E" hilft iOS den Codec zu erkennen */}
+            <source src={VIDEO_URL} type="video/mp4; codecs=avc1.42E01E, mp4a.40.2" />
             <source src={VIDEO_URL} type="video/mp4" />
           </video>
 
