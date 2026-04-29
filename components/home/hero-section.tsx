@@ -1,68 +1,69 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import { LoadingScreen } from "@/components/loading-screen"
 
-// Vercel Blob URL - H.264 encoded MP4 für beste iOS Kompatibilität
+// Vercel Blob URL
 const VIDEO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/8386975-uhd_4096_2160_25fps%20%281%29%20%281%29-w0ze6gWvgrrNeCaWGXH3aWF9gfqVHc.mp4"
 
 export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const hasAttemptedPlay = useRef(false)
+
+  const attemptPlay = useCallback(async () => {
+    const video = videoRef.current
+    if (!video) return
+
+    // iOS Safari: Diese Properties MÜSSEN vor play() gesetzt sein
+    video.muted = true
+    video.volume = 0
+    
+    try {
+      await video.play()
+      setIsVideoReady(true)
+      setIsLoading(false)
+    } catch {
+      // Fallback: UI trotzdem anzeigen
+      setIsVideoReady(true)
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || hasAttemptedPlay.current) return
-    hasAttemptedPlay.current = true
+    if (!video) return
 
-    // iOS Safari Autoplay: Video MUSS muted sein und playsinline haben
-    // Diese Attribute müssen SOWOHL als DOM-Attribute als auch als Properties gesetzt werden
-    video.muted = true
-    video.playsInline = true
+    // iOS: Attribute direkt auf dem DOM-Element setzen
+    video.setAttribute("playsinline", "")
+    video.setAttribute("webkit-playsinline", "")
+    video.setAttribute("muted", "")
+    
+    // Event-basiertes Abspielen für iOS
+    const handleCanPlay = () => attemptPlay()
+    const handleLoadedData = () => attemptPlay()
 
-    // Wichtig: volume = 0 zusätzlich zu muted für iOS
-    video.volume = 0
+    video.addEventListener("canplaythrough", handleCanPlay, { once: true })
+    video.addEventListener("loadeddata", handleLoadedData, { once: true })
 
-    const attemptPlay = async () => {
-      try {
-        // iOS benötigt manchmal einen kurzen Delay
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        const playPromise = video.play()
-        if (playPromise !== undefined) {
-          await playPromise
-        }
-        setIsVideoReady(true)
-        setTimeout(() => setIsLoading(false), 200)
-      } catch {
-        // iOS Low Power Mode oder andere Blockierung
-        // Video-Poster wird als Fallback angezeigt
-        setIsVideoReady(true)
-        setIsLoading(false)
-      }
-    }
-
-    // Warte auf genügend Daten vor dem Abspielen
-    if (video.readyState >= 2) {
+    // Sofort versuchen falls bereits geladen
+    if (video.readyState >= 3) {
       attemptPlay()
-    } else {
-      video.addEventListener("loadeddata", attemptPlay, { once: true })
     }
 
-    // Fallback-Timer falls Video nicht lädt
+    // Fallback-Timer
     const fallbackTimer = setTimeout(() => {
       setIsLoading(false)
       setIsVideoReady(true)
-    }, 3000)
+    }, 4000)
 
     return () => {
       clearTimeout(fallbackTimer)
-      video.removeEventListener("loadeddata", attemptPlay)
+      video.removeEventListener("canplaythrough", handleCanPlay)
+      video.removeEventListener("loadeddata", handleLoadedData)
     }
-  }, [])
+  }, [attemptPlay])
 
   return (
     <>
@@ -70,34 +71,22 @@ export function HeroSection() {
 
       <section className="relative h-[100svh] min-h-[500px] sm:min-h-[600px] max-h-[900px]">
         <div className="absolute inset-0 bg-[#000000] overflow-hidden">
+          {/* iOS Safari Video: muted + playsinline + autoplay */}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
+            className="w-full h-full object-cover"
             autoPlay
             muted
             loop
             playsInline
-            // iOS Safari: preload="metadata" ist besser als "auto" - spart Bandbreite
-            preload="metadata"
-            // x-webkit-airplay="deny" verhindert AirPlay-Probleme
-
-
-            webkit-playsinline="true"
-            x-webkit-airplay="deny"
-            disablePictureInPicture
-            disableRemotePlayback
+            preload="auto"
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
               opacity: isVideoReady ? 1 : 0,
               transition: "opacity 0.5s ease",
             }}
-          >
-            {/* type="video/mp4; codecs=avc1.42E01E" hilft iOS den Codec zu erkennen */}
-            <source src={VIDEO_URL} type="video/mp4; codecs=avc1.42E01E, mp4a.40.2" />
-            <source src={VIDEO_URL} type="video/mp4" />
-          </video>
+            src={VIDEO_URL}
+          />
 
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a]/80 via-[#1a1a1a]/50 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a]/60 via-transparent to-[#1a1a1a]/20" />
@@ -123,7 +112,7 @@ export function HeroSection() {
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Link
                   href="/kollektion"
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-[#1a1a1a] font-medium hover:bg-white/90 transition-colors text-center"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-[#e8b4b8] text-[#1a1a1a] font-medium hover:bg-[#dba5a9] transition-colors text-center"
                 >
                   Kollektion ansehen
                 </Link>
