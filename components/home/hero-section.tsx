@@ -19,7 +19,7 @@ export function HeroSection() {
     // iOS Safari: Diese Properties MÜSSEN vor play() gesetzt sein
     video.muted = true
     video.volume = 0
-    
+
     try {
       await video.play()
       setIsVideoReady(true)
@@ -39,7 +39,7 @@ export function HeroSection() {
     video.setAttribute("playsinline", "")
     video.setAttribute("webkit-playsinline", "")
     video.setAttribute("muted", "")
-    
+
     // Event-basiertes Abspielen für iOS
     const handleCanPlay = () => attemptPlay()
     const handleLoadedData = () => attemptPlay()
@@ -70,7 +70,11 @@ export function HeroSection() {
       <LoadingScreen isLoading={isLoading} />
 
       <section className="relative h-[100svh] min-h-[500px] sm:min-h-[600px] max-h-[900px]">
-        <div className="absolute inset-0 bg-[#000000] overflow-hidden">
+        <div style={{
+          height: "100vdh",
+          overflow: "hidden"
+        }}
+          className="absolute inset-0 bg-[#000000] overflow-hidden">
           {/* iOS Safari Video: muted + playsinline + autoplay */}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
