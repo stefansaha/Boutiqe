@@ -62,11 +62,7 @@ export function HeroSection() {
       <LoadingScreen isLoading={isLoading} />
 
       <section className="relative h-svh min-h-[500px] sm:min-h-[600px] max-h-[900px]">
-        <div style={{
-          height: "100dvh",
-          overflow: "hidden"
-        }}
-          className="absolute inset-0 bg-[#000000] overflow-hidden">
+        <div className="absolute inset-0 bg-[#000000] overflow-hidden">
           {/* iOS Safari Video: muted + playsinline + autoplay */}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
