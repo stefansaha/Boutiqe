@@ -71,7 +71,7 @@ export function HeroSection() {
 
       <section className="relative h-[100svh] min-h-[500px] sm:min-h-[600px] max-h-[900px]">
         <div style={{
-          height: "100vdh",
+          height: "100dvh",
           overflow: "hidden"
         }}
           className="absolute inset-0 bg-[#000000] overflow-hidden">
