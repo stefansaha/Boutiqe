@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
+import { useIOSVideoAutoplay } from "@/lib/use-ios-video-autoplay"
 
 // Vercel Blob URL
 const VIDEO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/5704899-uhd_4096_2160_24fps%20%281%29-4x9TYP7x6hUlQyIHdXXUnGOqdeGJUX.mp4"
@@ -29,55 +30,31 @@ export function CTASection() {
     return () => observer.disconnect()
   }, [])
 
-  const attemptPlay = useCallback(async () => {
+  const handleReady = useCallback(() => {
     const video = videoRef.current
-    if (!video) return
-
-    // iOS Safari: Diese Properties MÜSSEN vor play() gesetzt sein
-    video.muted = true
-    video.volume = 0
-
-    try {
-      await video.play()
+    if (video) {
       video.playbackRate = 0.8
-    } catch {
-      // iOS Low Power Mode - Video bleibt pausiert
     }
   }, [])
 
+  // iOS Video Autoplay Hook
+  useIOSVideoAutoplay(videoRef, handleReady)
+
+  // Pausieren wenn nicht sichtbar (spart Batterie auf iOS)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
-    // iOS: Attribute direkt auf dem DOM-Element setzen
-    video.setAttribute("playsinline", "")
-    video.setAttribute("webkit-playsinline", "")
-    video.setAttribute("muted", "")
-
-    if (isVisible) {
-      const handleCanPlay = () => attemptPlay()
-      video.addEventListener("canplaythrough", handleCanPlay, { once: true })
-
-      // Sofort versuchen falls bereits geladen
-      if (video.readyState >= 3) {
-        attemptPlay()
-      }
-
-      return () => {
-        video.removeEventListener("canplaythrough", handleCanPlay)
-      }
-    } else {
-      // Pausieren wenn nicht sichtbar
-      if (!video.paused) {
-        video.pause()
-      }
+    if (!isVisible && !video.paused) {
+      video.pause()
+    } else if (isVisible && video.paused) {
+      video.play().catch(() => {})
     }
-  }, [isVisible, attemptPlay])
+  }, [isVisible])
 
   return (
     <section ref={sectionRef} className="relative pt-20 sm:pt-28 pb-24 lg:pb-32 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
-        {/* iOS Safari Video: muted + playsinline + autoplay */}
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}

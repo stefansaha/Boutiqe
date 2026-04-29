@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import { LoadingScreen } from "@/components/loading-screen"
+import { useIOSVideoAutoplay } from "@/lib/use-ios-video-autoplay"
 
 // Vercel Blob URL
 const VIDEO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/8386975-uhd_4096_2160_25fps%20%281%29%20%281%29-w0ze6gWvgrrNeCaWGXH3aWF9gfqVHc.mp4"
@@ -12,50 +13,23 @@ export function HeroSection() {
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  const attemptPlay = useCallback(async () => {
-    const video = videoRef.current
-    if (!video) return
-
-    // iOS Safari: Diese Properties MÜSSEN vor play() gesetzt sein
-    video.muted = true
-    video.volume = 0
-
-    try {
-      await video.play()
-      setIsVideoReady(true)
-      setIsLoading(false)
-    } catch {
-      // Fallback: UI trotzdem anzeigen
-      setIsVideoReady(true)
-      setIsLoading(false)
-    }
+  const handleReady = useCallback(() => {
+    setIsVideoReady(true)
+    setIsLoading(false)
   }, [])
 
+  // iOS Video Autoplay Hook - startet bei erster Berührung
+  useIOSVideoAutoplay(videoRef, handleReady)
+
+  // Fallback-Timer falls nichts passiert
   useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    // iOS: Attribute direkt auf dem DOM-Element setzen
-    video.setAttribute("playsinline", "")
-    video.setAttribute("webkit-playsinline", "")
-    video.setAttribute("muted", "")
-
-
-    // Sofort versuchen falls bereits geladen
-    if (video.readyState >= 3) {
-      attemptPlay()
-    }
-
-    // Fallback-Timer
     const fallbackTimer = setTimeout(() => {
       setIsLoading(false)
       setIsVideoReady(true)
     }, 4000)
 
-    return () => {
-      clearTimeout(fallbackTimer)
-    }
-  }, [attemptPlay])
+    return () => clearTimeout(fallbackTimer)
+  }, [])
 
   return (
     <>
@@ -63,11 +37,14 @@ export function HeroSection() {
 
       <section className="relative h-svh min-h-[500px] sm:min-h-[600px] max-h-[900px]">
         <div className="absolute inset-0 bg-[#000000] overflow-hidden">
-          {/* iOS Safari Video: muted + playsinline + autoplay */}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
+            style={{
+              opacity: isVideoReady ? 1 : 0,
+              transition: "opacity 0.5s ease",
+            }}
             autoPlay
             muted
             loop
